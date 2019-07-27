@@ -1,0 +1,37 @@
+* {
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+}
+
+ul, ol, li, a {
+  list-style: none;
+}
+
+html, body, #app {
+  height: 100%;
+}
+
+body .draw-area {
+  display: inline-flex;
+}
+
+body .draw-area > canvas {
+  border: 1px dotted pink !important;
+}
+
+body .foolr-slow ul {
+  padding: 0 5px;
+}
+
+body .foolr-slow ul li {
+  display: inline-block;
+  border: 2px solid gold;
+  margin: 0 5px;
+  line-height: 40px;
+}
+
+body .foolr-slow ul li:hover {
+  border: 2px solid blue;
+  cursor: pointer;
+}

@@ -26,15 +26,15 @@
  * f = App.cacheContain(k);
  * App.cacheRemove(k);
  */
-const App = require('./http-2.0.js');
-const mysql = require('./mysql-2.0.js');
-const DbUtil = require('./dbUtil-mysql.js');
+const App = require('./libs/http-2.0.js');
+const mysql = require('./libs/mysql-2.0.js');
+const DbUtil = require('./libs/dbUtil-mysql.js');
 const AppTbs = require('./tables.js');
 const PORT = 3201;
 
 /** 启动服务（同时也是服务配置） */
-App.start(PORT, () => {
-    mysql.init('localhost', 3306, 'test', null, null);
+App.start({port: PORT}, () => {
+    mysql.init(null, null, 'test', null, null);
     DbUtil.getCreateSql(AppTbs.assets, sql => mysql.createTable(sql));
     DbUtil.getCreateSql(AppTbs.draw, sql => mysql.createTable(sql));
     DbUtil.getCreateSql(AppTbs.els, sql => mysql.createTable(sql));
@@ -44,7 +44,6 @@ App.start(PORT, () => {
         res.setHeader("Access-Control-Allow-Headers", "content-type,x-requested-with");
     }
 });
-
 
 /** 设备图片上传 */
 App.route("/upload_asset.do", (req, res, params) => {
@@ -136,7 +135,7 @@ App.route('/delete_el.do', (req, res, ps)=>{
     App.reqDataFormat(ps, {id:'number'});
     App.validator({id: {required: true}},ps, (b, msg)=>{
         if(b) {
-            mysql.executeSql(`delete form ${AppTbs.els.n} where id=${ps.id}`, ()=>{
+            mysql.executeSql(`delete from ${AppTbs.els.n} where id=${ps.id}`, ()=>{
                 App.responseEmpty(res);
             })
         } else {
@@ -144,6 +143,4 @@ App.route('/delete_el.do', (req, res, ps)=>{
         }
     })
 })
-
-
 

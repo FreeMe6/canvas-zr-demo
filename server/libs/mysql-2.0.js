@@ -1,7 +1,7 @@
 const mysql = require('mysql');
 
 function initClient(host, port, db, u, p) {
-    if (!db || db == '') {
+    if (!db || db === '') {
         new Error('connect db not allow empty !');
         return;
     }
@@ -79,7 +79,7 @@ function insertRow(sql, row, done) {
             paramStr = (i + 1) === size ? `${paramStr}'${row[i]}'` : `${paramStr}'${row[i]}', `;
         } else {
             if (undefined === row[i]) {
-                row[i] === null;
+                row[i] = null;
             }
             if (dataType === 'function') {
                 return;
@@ -135,7 +135,7 @@ exports.insertRowDataAuto = function (tb, cs, ps, done) {
                 paramStr = (i + 1) === size ? `${paramStr}'${v}'` : `${paramStr}'${v}', `;
             } else {
                 if (undefined === row[i]) {
-                    row[i] === null;
+                    row[i] = null;
                 }
                 if (dataType === 'function') {
                     new Error(`warning !!! \n param[${row[i]}] typeof is function!!!`);

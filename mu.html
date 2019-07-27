@@ -1,236 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Document</title>
-    <script src="jquery-3.2.1.min.js"></script>
-    <script src="zrender.min.js"></script>
-    <script src="vue-2.6.10.js"></script>
-    <script src="ajax-1.2.0.js"></script>
-    <style>
-    *{margin: 0;padding: 0;font-size: 14px;}
-    ul,ol,li,a {list-style: none;}
-    html,body,#app {height: 100%;}
-    body .draw-area{display: inline-flex;}
-    body .draw-area > canvas {border: 1px dotted pink !important;}
-    body .foolr-slow ul {padding: 0 5px;}
-    body .foolr-slow ul li {display: inline-block;border: 2px solid gold; margin: 0 5px; line-height: 40px;}
-    body .foolr-slow ul li:hover {border: 2px solid blue;cursor: pointer;}
-    </style>
-    <script>
-        window.cavs = { host: 'localhost', port: 3201, name: 'Canval Grap', version: '1.0.0 bate'}
-        window.cavs.port_cfg = { port: window.cavs.port }
-        // 鼠标按下指示
-        eMouseDown = false;
-        // 选中指示框
-        boundingRect = undefined;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <!-- style -->
+  <link rel="stylesheet" href="libs/css/element-ui-2.8.2.css">
+  <link rel="stylesheet" href="libs/css/font.css">
+  <link rel="stylesheet" href="mu.css">
 
-        $(function() {
-            new Vue({
-                el: '#app',
-                data: function () {
-                    return {
-                        // 当前选中的
-                        current: undefined,
-                        hideShade: false,
-                        lock: false,
-                        zr: undefined,
-                        // 图片地址
-                        photoDir: './files/',
-                        // 设备信息
-                        asset: {
-                            //设备唯一id
-                            id: undefined,
-                            //设备编号
-                            code: undefined,
-                            //设备名称
-                            name: undefined,
-                            //设备电压
-                            voltage: undefined,
-                            //设备电流
-                            current: undefined,
-                            //设备功率
-                            power: undefined,
-                            //设备图片
-                            file: undefined
-                        },
-                        dataAssets: []
-                    }
-                },
-                methods: {
-                    reload() {
-                        window.location.reload();
-                    },
-                    reloadAssert() {
-                        jsonGetLocalData('/list_asset.do', {}, d => {
-                            this.dataAssets = getRows(d);
-                        }, window.cavs.port_cfg)
-                    },
-                    formatAsset() {
-                        let file = this.asset.file[0];
-                        this.asset.file = undefined;
-                        let formData = new FormData();
-                        Object.entries(this.asset).map(([k, v]) => formData.append(k, v));
-                        // 如果有多个图，可以多次对相同key进行添加
-                        formData.append('file', file, file.name || ('blob.' + file.type.substr('image/'.length)));
-                        return formData;
-                    },
-                    handleFileChange(e) {
-                        console.log(e.target.files);
-                        this.asset.file = e.target.files;
-                    },
-                    move(group) {
-                        if (eMouseDown) {
-                            boundingRect.show()
-                            var rect = group.getBoundingRect();
-                            boundingRect.setShape({
-                                x: rect.x,
-                                y: rect.y,
-                                width: rect.width,
-                                height: rect.height
-                            });
-                            boundingRect.style.stroke = '#14f1ff'
-                        }
-                    },
-                    handleAssetDclick(asset) {
-                        const S = this;
-                        const astGroup = new zrender.Group();
-                        const w = this.zr.getWidth();
-                        const h = this.zr.getHeight();
-                        S.zr.add(astGroup);
-                        
-                        var t1 = new zrender.Text({
-                            meType: 'text',
-                            assetId: asset.id,
-                            propType: 'label',
-                            draggable: true,
-                            style: {
-                                text: `设备：${asset.name}`,
-                                textAlign: 'center',
-                                textVerticalAlign: 'middle',
-                                fontSize: 12,
-                                textFill: '#000'
-                            },
-                            position: [w / 2 + 5, h / 2]
-                        }).on('mousemove', function () {
-                            S.move(astGroup);
-                        }).on('click', function(){
-                            S.current = this;
-                            console.log(this);
-                        })
+  <!-- library -->
+  <script src="libs/jquery-3.2.1.min.js"></script>
+  <script src="libs/zrender.min.js"></script>
+  <script src="libs/vue-2.6.10.js"></script>
+  <script src="libs/element-ui-2.7.2.js"></script>
 
-                        var img = new zrender.Image({
-                            meType: 'image',
-                            assetId: asset.id,
-                            propType: 'photo',
-                            draggable: true,
-                            style: {
-                                // 设置图片的url
-                                image: this.photoDir + asset.photo,
-                                // 相对于左上角
-                                //x: 100,
-                                //y: 50,
-                                width: 40,
-                                height: 40
-                            },
-                            position: [w / 2 + 5, h / 2]
-                        }).on('mousemove', function () {
-                            S.move(astGroup);
-                        }).on('click', function(){
-                            S.current = this;
-                            console.log(this);
-                        })
-                        
-
-                        astGroup.add(t1).add(img);
-                    },
-                    uEditorResize() {
-                    },
-                    // 上传文件的测试
-                    handleUploadClick() {
-                        jsonPostLocalMutiptData('/upload_asset.do', this.formatAsset(), data => {
-                            this.$message(getCommonReqMessage(data));
-                            this.reload();
-                        }, window.cavs.port_cfg)
-                    }
-                },
-                mounted() {
-                    this.hideShade = true;
-                    this.zr = zrender.init(document.getElementById('main'), {
-                        width: 800,
-                        height: 600
-                    });
-
-                    this.zr.on('mousedown', function () {
-                        eMouseDown = true;
-                    });
-                    this.zr.on('mouseup', function () {
-                        eMouseDown = false;
-                    });
-
-                    boundingRect = new zrender.Rect({
-                        shape: {
-                            cx: 0,
-                            cy: 0,
-                            x: 0,
-                            y: 0,
-                            width: 0,
-                            height: 0
-                        },
-                        style: {
-                            fill: 'none',
-                            stroke: '#14f1ff'
-                        }
-                    });
-                    this.zr.add(boundingRect);
-
-                    this.zr.on('click', function () {
-                        // 如果按下时，没有选中对象则可以隐藏了
-                        if (!this._downEl) {
-                            boundingRect.hide()
-                        }
-                        console.log(this._downEl);
-                    })
-
-                    // 加载设备列表
-                    this.reloadAssert();
-
-                    window.addEventListener('resize', (me => {
-                        setTimeout(me.uEditorResize(), 300);
-                    })(this), false);
-                }
-            })
-        })
-    </script>
+  <!-- custom -->
+  <script src="libs/ajax-1.2.0.js"></script>
+  <script src="mu.js"></script>
+  <script>
+    window.cavs = {host: 'localhost', port: 3201, name: 'Canval Grap', version: '1.0.0 bate'}
+    window.cavs.port_cfg = {port: window.cavs.port}
+    $(function () {
+      MU.init();
+    })
+  </script>
 </head>
 <body>
-    <div id="app">
-        <div class="draw-area">
-            <canvas id="main"></canvas>
-            <div>
-               <p v-if="current">x: {{current.position[0]}}</p>
-               <p v-if="current">y: {{current.position[1]}}</p>
-               <p v-if="current">r：{{current.rotation}}</p>
-               <p v-if="current">image：{{current.style.image}}</p>
-               <p v-if="current">w：{{current.style.width}}</p>
-               <p v-if="current">h：{{current.style.height}}</p>
-               <p v-if="current">字体大小：{{current.style.fontSize}}</p>
-               <p v-if="current">当前对象类型: {{current.meType}}</p>
-               <p v-if="current">当前对象关联设备id: {{current.assetId}}</p>
-               <p v-if="current">当前关联属性为：{{current.propType}}</p>
-            </div>
-        </div>
-        <div class="foolr-slow">
-            <ul>
-                <li v-for="ast in dataAssets">
-                    <img :src="photoDir + ast.photo" :alt="ast.name" width="40" height="40" 
-                    :title="'双击添加'+ ast.name + '设备'" @dblclick="handleAssetDclick(ast)">
-                </li>
-            </ul>
-        </div>
+<div id="app">
+  <div class="draw-area">
+    <canvas id="main"></canvas>
+    <div>
+      <!--<p v-if="current">x: {{current.position[0]}}</p>-->
+      <!--<p v-if="current">y: {{current.position[1]}}</p>-->
+      <!--<p v-if="current">r：{{current.rotation}}</p>-->
+      <!--<p v-if="current">image：{{current.style.image}}</p>-->
+      <!--<p v-if="current">w：{{current.style.width}}</p>-->
+      <!--<p v-if="current">h：{{current.style.height}}</p>-->
+      <!--<p v-if="current">字体大小：{{current.style.fontSize}}</p>-->
+      <!--<p v-if="current">当前对象类型: {{current.meType}}</p>-->
+      <!--<p v-if="current">当前对象关联设备id: {{current.assetId}}</p>-->
+      <!--<p v-if="current">当前关联属性为：{{current.propType}}</p>-->
     </div>
-    
+  </div>
+  <div class="foolr-slow">
+    <ul>
+      <li v-for="ast in dataAssets">
+        <img :src="photoDir + ast.photo" :alt="ast.name" width="40" height="40"
+             :title="'双击添加'+ ast.name + '设备'" @dblclick="handleAssetDclick(ast)">
+      </li>
+    </ul>
+  </div>
+</div>
+
 </body>
 </html>

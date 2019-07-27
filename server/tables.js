@@ -32,21 +32,6 @@ exports.draw = {
 }
 
 /**
- * 设备的模板表
- * 1） 设备编号
- * 2） 是否在用
- * 3） 模板编号
- */
-// exports.assets_template = {
-//     n: 'assets_template',
-//     c: {
-//         id: { type: int, sqlType: 'INT NOT NULL PRIMARY KEY' },
-//         astId: {type: int, sqlType: 'INT NOT NULL'},
-//         used: {type: boolean, sqlType: 'TINYINT(1) NOT NULL'}
-//     }
-// }
-
-/**
  * 绘图数据表，对应canvas画板的数据的类型的存数，主要是用于绘图的信息的存储
  * 1） 类型的保存（主要是：text，img）
  * 2） 设备属性记录 astProp
