@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "formidable": "^1.2.1",
+    "fs": "^0.0.1-security",
+    "http": "^0.0.0",
+    "mysql": "^2.17.1",
+    "path": "^0.12.7",
+    "url": "^0.11.0",
+    "util": "^0.12.1"
+  }
+}
