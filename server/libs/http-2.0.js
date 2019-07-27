@@ -345,7 +345,7 @@ exports.start = function (cfg, done, every, fops) {
           form.encoding = 'utf-8';
           // 注意，此处的指定的目录必须存在，否则会报错的！由form中间件来实现文件的上传，我们需要配置上传的目录
           // 此处注意，因为__dirname是当前js的文件所在的目录，所以下面的目录就是当前js所在目录的同级下创建imgs目录
-          form.uploadDir = path.join(__dirname, cfg.upDir);
+          form.uploadDir = path.join(__dirname, path.join('../', cfg.upDir));
 
           // 处理请求中的文件
           form.on('file', function (name, file) {

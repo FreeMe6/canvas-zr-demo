@@ -18,6 +18,8 @@ body .draw-area {
 
 body .draw-area > canvas {
   border: 1px dotted pink !important;
+  width: 800px;
+  height: 600px;
 }
 
 body .foolr-slow ul {
