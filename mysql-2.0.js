@@ -5,7 +5,7 @@ function initClient(host, port, db, u, p) {
         new Error('connect db not allow empty !');
         return;
     }
-    client = mysql.createConnection({
+    let client = mysql.createConnection({
         host: host || '127.0.0.1',
         user: u || 'root',
         password: p || 'root',

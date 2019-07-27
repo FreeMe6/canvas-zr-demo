@@ -13,7 +13,7 @@
     *{margin: 0;padding: 0;font-size: 14px;}
     ul,ol,li,a {list-style: none;}
     html,body,#app {height: 100%;}
-    body .draw-area{display: inline;}
+    body .draw-area{display: inline-flex;}
     body .draw-area > canvas {border: 1px dotted pink !important;}
     body .foolr-slow ul {padding: 0 5px;}
     body .foolr-slow ul li {display: inline-block;border: 2px solid gold; margin: 0 5px; line-height: 40px;}
@@ -32,10 +32,13 @@
                 el: '#app',
                 data: function () {
                     return {
+                        // 当前选中的
+                        current: undefined,
                         hideShade: false,
+                        lock: false,
                         zr: undefined,
                         // 图片地址
-                        photoDir: '../files/',
+                        photoDir: './files/',
                         // 设备信息
                         asset: {
                             //设备唯一id
@@ -113,6 +116,9 @@
                             position: [w / 2 + 5, h / 2]
                         }).on('mousemove', function () {
                             S.move(astGroup);
+                        }).on('click', function(){
+                            S.current = this;
+                            console.log(this);
                         })
 
                         var img = new zrender.Image({
@@ -132,6 +138,9 @@
                             position: [w / 2 + 5, h / 2]
                         }).on('mousemove', function () {
                             S.move(astGroup);
+                        }).on('click', function(){
+                            S.current = this;
+                            console.log(this);
                         })
                         
 
@@ -201,7 +210,16 @@
         <div class="draw-area">
             <canvas id="main"></canvas>
             <div>
-                <ul></ul>
+               <p v-if="current">x: {{current.position[0]}}</p>
+               <p v-if="current">y: {{current.position[1]}}</p>
+               <p v-if="current">r：{{current.rotation}}</p>
+               <p v-if="current">image：{{current.style.image}}</p>
+               <p v-if="current">w：{{current.style.width}}</p>
+               <p v-if="current">h：{{current.style.height}}</p>
+               <p v-if="current">字体大小：{{current.style.fontSize}}</p>
+               <p v-if="current">当前对象类型: {{current.meType}}</p>
+               <p v-if="current">当前对象关联设备id: {{current.assetId}}</p>
+               <p v-if="current">当前关联属性为：{{current.propType}}</p>
             </div>
         </div>
         <div class="foolr-slow">

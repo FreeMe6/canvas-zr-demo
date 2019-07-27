@@ -34,7 +34,7 @@ const PORT = 3201;
 
 /** 启动服务（同时也是服务配置） */
 App.start(PORT, () => {
-    mysql.init('127.0.0.1', 3306, 'test', null, 'pw123456');
+    mysql.init('localhost', 3306, 'test', null, null);
     DbUtil.getCreateSql(AppTbs.assets, sql => mysql.createTable(sql));
     DbUtil.getCreateSql(AppTbs.draw, sql => mysql.createTable(sql));
     DbUtil.getCreateSql(AppTbs.els, sql => mysql.createTable(sql));
