@@ -30,117 +30,136 @@ const App = require('./libs/http-2.0.js');
 const mysql = require('./libs/mysql-2.0.js');
 const DbUtil = require('./libs/dbUtil-mysql.js');
 const AppTbs = require('./tables.js');
+const WsClient = require('./libs/ws_cli_node-1.0');
 const PORT = 3201;
 
 /** 启动服务（同时也是服务配置） */
 App.start({port: PORT}, () => {
-    mysql.init(null, null, 'test', null, null);
-    DbUtil.getCreateSql(AppTbs.assets, sql => mysql.createTable(sql));
-    DbUtil.getCreateSql(AppTbs.draw, sql => mysql.createTable(sql));
-    DbUtil.getCreateSql(AppTbs.els, sql => mysql.createTable(sql));
+  mysql.init(null, null, 'test', null, null);
+  DbUtil.getCreateSql(AppTbs.assets, sql => mysql.createTable(sql));
+  DbUtil.getCreateSql(AppTbs.draw, sql => mysql.createTable(sql));
+  DbUtil.getCreateSql(AppTbs.els, sql => mysql.createTable(sql));
+
+  WsClient.start('测试ws的服务端的扩展服务');
+
+  WsClient.beatEvent((d)=>{
+    console.log('heart beat', d)
+  })
+
+  WsClient.ready(function () {
+    WsClient.jsonMessagePush('count_area', {r: 5.5}, d => {
+      console.log(d);
+    })
+  })
+
 }, null, (req, res, p) => {
-    if ('/upload_asset.do' === p.pathname) {
-        // 覆盖OPTIONS请求必须有的请求头
-        res.setHeader("Access-Control-Allow-Headers", "content-type,x-requested-with");
-    }
+  if ('/upload_asset.do' === p.pathname) {
+    // 覆盖OPTIONS请求必须有的请求头
+    res.setHeader("Access-Control-Allow-Headers", "content-type,x-requested-with");
+  }
 });
 
 /** 设备图片上传 */
 App.route("/upload_asset.do", (req, res, params) => {
-    // 按照表中设置的数据类型转换参数中的值
-    DbUtil.transDataType(params, AppTbs.assets);
-    params.id = App.gsId();
-    // 将数据记录到数据库中
-    App.validator({ code: { required: true }, name: { required: true }, file: { required: true }, firstFile: { requested: true } }, params, f => {
-        if (f) {
-            mysql.insertRowData(DbUtil.buildInsertSql(AppTbs.assets), [
-                params.id, params.code, params.name, params.voltage, params.current, params.power, params.firstFile.fileName
-            ], () => {
-                App.responseOk(res, '插入成功');
-            })
-        }
-    })
+  // 按照表中设置的数据类型转换参数中的值
+  DbUtil.transDataType(params, AppTbs.assets);
+  params.id = App.gsId();
+  // 将数据记录到数据库中
+  App.validator({
+    code: {required: true},
+    name: {required: true},
+    file: {required: true},
+    firstFile: {requested: true}
+  }, params, f => {
+    if (f) {
+      mysql.insertRowData(DbUtil.buildInsertSql(AppTbs.assets), [
+        params.id, params.code, params.name, params.voltage, params.current, params.power, params.firstFile.fileName
+      ], () => {
+        App.responseOk(res, '插入成功');
+      })
+    }
+  })
 });
 
 /** 获取设备列表 */
 App.route("/list_asset.do", (req, res, ps) => {
-    const tb = AppTbs.assets;
-    mysql.queryData(`select * from ${tb.n}`, d => App.responseData(res, d), e => App.responseError(res))
+  const tb = AppTbs.assets;
+  mysql.queryData(`select * from ${tb.n}`, d => App.responseData(res, d), e => App.responseError(res))
 })
 
 /**
  * 保存绘图的数据字符串
  */
 App.route("/save_draw.do", (req, res, ps) => {
-    DbUtil.transDataType(ps, AppTbs.draw);
-    ps.id = App.gsId();
-    App.validator({ content: { required: true } }, ps, f => {
-        if (f) {
-            mysql.insertRowData(DbUtil.buildInsertSql(AppTbs.draw), [
-                ps.id, ps.content
-            ], () => {
-                App.responseOk(res, '插入成功');
-            })
-        }
-    })
+  DbUtil.transDataType(ps, AppTbs.draw);
+  ps.id = App.gsId();
+  App.validator({content: {required: true}}, ps, f => {
+    if (f) {
+      mysql.insertRowData(DbUtil.buildInsertSql(AppTbs.draw), [
+        ps.id, ps.content
+      ], () => {
+        App.responseOk(res, '插入成功');
+      })
+    }
+  })
 })
 /**
  * 获取绘图的字符串的列表
  */
 App.route("/list_draw.do", (req, res, ps) => {
-    const tb = AppTbs.draw;
-    mysql.queryData(`select * from ${tb.n}`, d => App.responseData(res, d), e => App.responseError(res))
+  const tb = AppTbs.draw;
+  mysql.queryData(`select * from ${tb.n}`, d => App.responseData(res, d), e => App.responseError(res))
 })
 
 /**
  * 保存当前绘制的一个对象
  */
 App.route("/saves.do", (req, res, ps) => {
-    DbUtil.transDataType(ps, AppTbs.els);
-    ps.id = App.gsId();
-    ps.tmpId = 1;// 先定义模板默认为1，不是1的就不是默认模板
-    App.validator({
-        id: { required: true }, type: { required: true }, prop: { required: true }, astId: { required: true },
-        x: { required: true }, y: { required: true }, w: { required: true }, h: { required: true }, r: { required: true }
-    }, ps, f => {
+  DbUtil.transDataType(ps, AppTbs.els);
+  ps.id = App.gsId();
+  ps.tmpId = 1;// 先定义模板默认为1，不是1的就不是默认模板
+  App.validator({
+    id: {required: true}, type: {required: true}, prop: {required: true}, astId: {required: true},
+    x: {required: true}, y: {required: true}, w: {required: true}, h: {required: true}, r: {required: true}
+  }, ps, f => {
+    if (f) {
+      App.validator({content: {required: true}}, ps, f => {
         if (f) {
-            App.validator({ content: { required: true } }, ps, f => {
-                if (f) {
-                    mysql.insertRowDataAuto(
-                        AppTbs.els,
-                        ['id', 'type', 'prop', 'astId', 'x', 'y', 'w', 'h', 'r', 'tmpId'],
-                        ps, () => {
-                            App.responseOk(res, '插入成功');
-                        }
-                    )
-                }
-            })
+          mysql.insertRowDataAuto(
+              AppTbs.els,
+              ['id', 'type', 'prop', 'astId', 'x', 'y', 'w', 'h', 'r', 'tmpId'],
+              ps, () => {
+                App.responseOk(res, '插入成功');
+              }
+          )
         }
-    })
+      })
+    }
+  })
 })
 
 /**
  * 获取绘制的一张图的数据
  */
-App.route('/getTempate.do', (req, res, ps)=>{
-    mysql.queryData(`select * from ${AppTbs.els}`, rows => {
-        App.responseData(res, rows);
-    })
+App.route('/getTempate.do', (req, res, ps) => {
+  mysql.queryData(`select * from ${AppTbs.els}`, rows => {
+    App.responseData(res, rows);
+  })
 })
 
 /**
  * 删除当前绘制的对象
  */
-App.route('/delete_el.do', (req, res, ps)=>{
-    App.reqDataFormat(ps, {id:'number'});
-    App.validator({id: {required: true}},ps, (b, msg)=>{
-        if(b) {
-            mysql.executeSql(`delete from ${AppTbs.els.n} where id=${ps.id}`, ()=>{
-                App.responseEmpty(res);
-            })
-        } else {
-            App.responseWarning(res, msg);
-        }
-    })
+App.route('/delete_el.do', (req, res, ps) => {
+  App.reqDataFormat(ps, {id: 'number'});
+  App.validator({id: {required: true}}, ps, (b, msg) => {
+    if (b) {
+      mysql.executeSql(`delete from ${AppTbs.els.n} where id=${ps.id}`, () => {
+        App.responseEmpty(res);
+      })
+    } else {
+      App.responseWarning(res, msg);
+    }
+  })
 })
 

@@ -31,20 +31,20 @@
 <div id="app">
   <div>
     <el-button @click="handleDialogShow">添加</el-button>
+    <el-button @click="handleDialogSaveCanvas">保存数据</el-button>
+    <el-button @click="handleDialogLoadCanvas">加载数据</el-button>
+    <el-select @change="handleSelectDataToRedraw" value="" placeholder="请选择">
+      <el-option
+          v-for="item in dataCanvasDatas"
+          :key="item.id"
+          :label="'data.'+item.id"
+          :value="item.content">
+      </el-option>
+    </el-select>
   </div>
   <div class="draw-area">
     <canvas id="canvas" width='800' height='600'></canvas>
     <div>
-      <!--<p v-if="current">x: {{current.position[0]}}</p>-->
-      <!--<p v-if="current">y: {{current.position[1]}}</p>-->
-      <!--<p v-if="current">r：{{current.rotation}}</p>-->
-      <!--<p v-if="current">image：{{current.style.image}}</p>-->
-      <!--<p v-if="current">w：{{current.style.width}}</p>-->
-      <!--<p v-if="current">h：{{current.style.height}}</p>-->
-      <!--<p v-if="current">字体大小：{{current.style.fontSize}}</p>-->
-      <!--<p v-if="current">当前对象类型: {{current.meType}}</p>-->
-      <!--<p v-if="current">当前对象关联设备id: {{current.assetId}}</p>-->
-      <!--<p v-if="current">当前关联属性为：{{current.propType}}</p>-->
     </div>
   </div>
   <div class="foolr-slow">

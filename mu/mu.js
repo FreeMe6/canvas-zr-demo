@@ -152,6 +152,26 @@ const MU = {
         },
         handleDialogShow() {
           this.assetEditDialog.visibleAssetDialog = true
+        },
+
+        // canvas data
+        handleDialogSaveCanvas () {
+          console.log()
+          // save canvas json data
+          jsonPostLocalData('/save_draw.do', {content: JSON.stringify(this.canvas.toJSON())}, data => {
+            this.$message(getCommonReqMessage(data));
+            this.canvas.clear();
+          }, window.cavs.port_cfg)
+        },
+        handleDialogLoadCanvas () {
+          jsonGetLocalData('/list_draw.do', {}, data => {
+            this.dataCanvasDatas = getRows(data);
+          }, window.cavs.port_cfg)
+        },
+        handleSelectDataToRedraw (v) {
+          console.log(JSON.stringify(v))
+          // 根据选择的json数据还原画板数据
+          this.canvas.loadFromJSON(v)
         }
       },
       mounted() {
@@ -178,7 +198,8 @@ const MU = {
             width: '600px',
             visibleAssetDialog: false,
           },
-          dataAssets: []
+          dataAssets: [],
+          dataCanvasDatas: []
         }
       },
     })
