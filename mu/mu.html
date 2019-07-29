@@ -18,6 +18,9 @@
 
   <!-- custom -->
   <script src="../libs/ajax-1.2.0.js"></script>
+  <script src="../libs/ws-1.0.js"></script>
+  <script src="../libs/data-attach-1.0.js"></script>
+  <script src="../libs/runner.js"></script>
   <script src="mu.js"></script>
   <script>
     window.cavs = {host: 'localhost', port: 3201, name: 'Canval Grap', version: '1.0.0 bate'}
@@ -41,9 +44,14 @@
           :value="item.content">
       </el-option>
     </el-select>
+
+
+    <el-button @click="handleToJson">toJsonLog</el-button>
+    <el-button @click="handleToObject">toObjectLog</el-button>
+    <el-button @click="handleShowAllObjects">ObjectsLog</el-button>
   </div>
   <div class="draw-area">
-    <canvas id="canvas" width='800' height='600'></canvas>
+    <canvas id="canvas" width='800' height='600' style="border: 1px solid plum"></canvas>
     <div>
     </div>
   </div>
@@ -99,3 +107,34 @@
 </div>
 </body>
 </html>
+
+<!--
+
+-- 查看绑组的实例：
+http://fabricjs.com/using-transformations
+
+
+-- 为了实现绑点，结合目前了解的情况来看，必须给指定唯一编号和点表的对应关系才能实现；
+ 在序列化的过程中，实际上，会将其他的基本信息给丢掉，所以保存和恢复之后，我们将失去设备关联信息，为了找到对应关系
+ 那么，创建的时候，使用text属性记录唯一的展位编号，然后加载的时候，建立好对应的关系，相当于我们需要管理每个对象-设备
+ 关联的信息才能实现最终的数据的绑定，为了简化这个操作，需要封装部分js库赖支持。
+
+
+ -- 一个是请求模板库，获取数据模板
+ -- 一个是获取（对象-点表-模板）记录表，用于存储关联信息
+ -- 加载时，选择模板，然后，针对这个模板，获取关联设备点的数据，然后
+
+
+(1) 转换序列化的时候，会丢失非Object中的属性
+因此可以自行扩充附加属性来解决这个问题
+
+rect.toObject =(function（toObject){
+  return function(){
+    return fabric.util.object.extend(toObject.call（this），{
+      name：this.name
+    });
+  };
+})(rect.toObject);
+
+-->
+

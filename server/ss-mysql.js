@@ -35,7 +35,7 @@ const PORT = 3201;
 
 /** 启动服务（同时也是服务配置） */
 App.start({port: PORT}, () => {
-  mysql.init(null, null, 'test', null, null);
+  mysql.init(null, null, 'test', 'root', 'pw123456');
   DbUtil.getCreateSql(AppTbs.assets, sql => mysql.createTable(sql));
   DbUtil.getCreateSql(AppTbs.draw, sql => mysql.createTable(sql));
   DbUtil.getCreateSql(AppTbs.els, sql => mysql.createTable(sql));
@@ -47,7 +47,7 @@ App.start({port: PORT}, () => {
   })
 
   WsClient.ready(function () {
-    WsClient.jsonMessagePush('count_area', {r: 5.5}, d => {
+    WsClient.jsonDataService('count_area', {r: 5.5}, d => {
       console.log(d);
     })
   })

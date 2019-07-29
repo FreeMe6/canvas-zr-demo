@@ -1,18 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>skynet websocket example</title>
+    <meta charset="utf-8">
+    <title>skynet websocket example</title>
 </head>
 <body>
 <script src="../libs/ws-1.0.js"></script>
 <script>
-  WS10.connect('页面端ws客户端（ST01122）')
-      .ready(function (me) {
-        me.jsonDataService('readServiceList', {}, d => console.log(d));
-        me.jsonDataService('count_area', {r: 625.4}, d => console.log(d));
-        me.jsonDataService('readClientRegister', {}, d=> console.log(d));
-      });
+    WS10.connect('页面端ws客户端（ST01122）', undefined, undefined, 1000)
+        .ready(function (me) {
+            me.jsonDataService('readServiceList', {}, d => console.log(d));
+            me.jsonDataService('count_area', {r: 625.4}, d => console.log(d));
+            me.jsonDataService('simValue', {bv: 220, adj: 10}, d => console.log(d));
+        })
+        .heartBeat(function (inf) {
+            WS10.jsonDataService('simValue', {bv: 220, adj: 10}, d => console.log(d));
+        });
 </script>
 </body>
 <html>

@@ -6,8 +6,8 @@ Server.addService('count_area', '计算园的面积', d => {
   return d.r * d.r * 3.1415926;
 });
 
-Server.addService('getVoltage', '获取模拟电压，自动波动10v内变化', d => {
-  return 0;
+Server.addService('simValue', '获取模拟电压,请指定比如： {bv:220, adj: 10}', d => {
+  return d.bv - Math.random() * d.adj * ((parseInt(new Date().getTime()/100))%2 ===0 ? 1: -1);
 });
 
 Server.addService('readServiceList', '获取服务列表', d => {

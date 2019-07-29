@@ -8,6 +8,18 @@ const MU = {
     this.vue = new Vue({
       el: '#app',
       methods: {
+        //test
+        // 1. 序列化数据查看
+        handleToObject() {
+          console.log('To Serilaizibel Data (Object)', this.canvas.toObject())
+        },
+        handleToJson() {
+          console.log('To Serilaizibel Data (Json)', this.canvas.toJSON())
+        },
+        handleShowAllObjects () {
+          console.log('as canvas all objects', this.canvas.getObjects())
+        },
+
         // asset
         doReloadAssertList() {
           jsonGetLocalData('/list_asset.do', {}, d => {
@@ -58,6 +70,8 @@ const MU = {
         // main asset
         handleAssetDclick(asset) {
           const S = this;
+
+          // 注册设备信息，关联对象，否则怎么数据变化？
 
           const gadd = (asset) => {
             const cfg = {
@@ -127,9 +141,6 @@ const MU = {
                 fontSize: cfg.fsize,
                 fontWeight:'bold'
               }),
-              new fabric.Text('电压：' + asset.voltage + ' V', {
-                fontSize: cfg.fsize
-              }),
               new fabric.Text('电流：' + asset.current + ' A', {
                 fontSize: cfg.fsize
               }),
@@ -137,6 +148,19 @@ const MU = {
                 fontSize: cfg.fsize
               })
             ];
+
+            let vv = new fabric.Text('电压：' + asset.voltage + ' V', {
+              fontSize: cfg.fsize
+            });
+
+            fabricAttchToObject(vv, new Map([
+                ['astId', asset.id]
+            ]));
+
+
+            console.log('Add asset of voltage el info ', vv);
+            childs.push(vv);
+
             fabric.Image.fromURL(this.photoDir + asset.photo, function (oImg) {
               oImg.scale(0.3).set({top: 0, left: 10});
 
@@ -169,15 +193,42 @@ const MU = {
           }, window.cavs.port_cfg)
         },
         handleSelectDataToRedraw (v) {
-          console.log(JSON.stringify(v))
+          console.log('Select Serilaizibel Data', JSON.parse(v));
+
           // 根据选择的json数据还原画板数据
           this.canvas.loadFromJSON(v)
+        },
+        beat(inf) {
+          const  S = this;
+          WS10.jsonDataService('simValue', {bv: 220, adj: 10}, d => {
+            let voltage = d.data;
+
+            // 获取所有对象进行对号入座
+              // 如果是： 不同的类型进行不同的处理
+            S.canvas.getObjects().filter(o => o.astId !== undefined).forEach(a => {
+              if (parseInt(a.astId) === 108983){
+                if (voltage > 219) {
+                  a.set({text: '电压：' + parseFloat(voltage).toFixed(2)+'V', fill: 'red'})
+                } else {
+                  a.set({text: '电压：' + parseFloat(voltage).toFixed(2)+'V', fill: '#000'})
+                }
+              }
+            })
+
+            fabricRenderAll(S.canvas);
+          });
         }
       },
       mounted() {
         // 加载设备列表
         this.doReloadAssertList();
         this.canvas = new fabric.Canvas('canvas')
+        WS10.connect('页面端ws客户端（ST01122').ready(function (me) {
+              me.jsonDataService('readServiceList', {}, d => console.log(d));
+            });
+
+        // 创建定时任务执行心跳
+        Rr.runxms('t-1',8,this.beat);
       },
       data: function () {
         return {

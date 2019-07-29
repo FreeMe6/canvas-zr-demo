@@ -8,16 +8,18 @@ const WS10 = {
   cli_name: undefined,
   /**
    * 建立连接
-   * @param name
-   * @param host
-   * @param port
+   * @param name 客户端自定义名称
+   * @param host 连接服务器
+   * @param port 连接端口
    */
-  connect (name='cli', host='127.0.0.1', port='3030') {
+  connect (name, host, port) {
+    host = host || '127.0.0.1';
+    port = port || 3030;
     const _$ = this;
     _$.ws = new WebSocket(`ws://${host}:${port}`);
     const code = parseInt(new Date().getTime() / 1000 - 1563414027);
     _$.cli_code = 'sn' + code;
-    _$.cli_name = name === 'cli' ? name + code : name;
+    _$.cli_name = !!name ? 'cli'+ name + code : name;
     const regData = {type: 'start', cli_code: _$.cli_code, cli_name:  _$.cli_name}
 
     _$.ws.onopen = function(){
@@ -29,10 +31,8 @@ const WS10 = {
         try{
           _$.ws.send(JSON.stringify({type: 'ping', cli_code:_$.cli_code}))
         } catch (e) {
-          //
         }
-
-      },3000)
+      },1000);
 
       if ( _$.ws.readyHandler) {
         _$.ws.readyHandler(_$);
