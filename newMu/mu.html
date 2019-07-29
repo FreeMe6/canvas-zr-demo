@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <!-- style -->
+  <link rel="stylesheet" href="../libs/css/element-ui-2.8.2.css">
+  <link rel="stylesheet" href="../libs/css/font.css">
+  <link rel="stylesheet" href="../mu/mu.css">
+
+  <!-- library -->
+  <script src="../libs/jquery-3.2.1.min.js"></script>
+  <script src="../libs/fabric.min.js"></script>
+  <script src="../libs/vue-2.6.10.js"></script>
+  <script src="../libs/element-ui-2.7.2.js"></script>
+
+  <!-- custom -->
+  <script src="../libs/ajax-1.2.0.js"></script>
+  <script src="../libs/ws-1.0.js"></script>
+  <script src="../libs/data-attach-1.0.js"></script>
+  <script src="../libs/runner.js"></script>
+  <script>
+    window.cavs = {host: 'localhost', port: 3201, name: 'Canval Grap', version: '1.0.0 bate'}
+    window.cavs.port_cfg = {port: window.cavs.port}
+    $(function () {
+      new Vue({
+        el: '#app',
+        methods: {
+          //test
+          // 1. 序列化数据查看
+          handleToObject() {
+            console.log('To Serilaizibel Data (Object)', this.canvas.toObject())
+          },
+          handleToJson() {
+            console.log('To Serilaizibel Data (Json)', this.canvas.toJSON())
+          },
+          handleShowAllObjects () {
+            console.log('as canvas all objects', this.canvas.getObjects())
+          },
+          //
+          doReloadAssertList() {
+            jsonGetLocalData('/list_asset.do', {}, d => {
+              this.dataAssets = getRows(d);
+            }, window.cavs.port_cfg)
+          },
+          formAssetFormat() {
+            let file = this.formAsset.file[0];
+            this.formAsset.file = undefined;
+            let formData = new FormData();
+            Object.entries(this.formAsset).map(([k, v]) => formData.append(k, v));
+            // 如果有多个图，可以多次对相同key进行添加
+            formData.append('file', file, file.name || ('blob.' + file.type.substr('image/'.length)));
+            return formData;
+          },
+          //
+          handleDialogFileChange(e) {
+            console.log(e.target.files);
+            this.formAsset.file = e.target.files;
+          },
+          handleDialogReset() {
+            this.assetEditDialog.visibleAssetDialog = false
+            this.assetEditDialog.active = 'add'
+            this.formAsset.code = undefined
+            this.formAsset.name = undefined
+            this.formAsset.voltage = undefined
+            this.formAsset.current = undefined
+            this.formAsset.power = undefined
+            this.formAsset.file = undefined
+            $('input[type=file]').val(null);
+          },
+          handleDialogClose(done) {
+            if (done) done()
+            this.handleDialogReset();
+          },
+          handleDialogCancel() {
+            this.handleDialogReset();
+          },
+          handleDialogSave() {
+            jsonPostLocalMutiptData('/upload_asset.do', this.formAssetFormat(), data => {
+              this.$message(getCommonReqMessage(data));
+              this.handleDialogReset()
+              this.doReloadAssertList()
+            }, window.cavs.port_cfg)
+          },
+          //
+          handleAssetDclick(asset, _='从设备列表中选中设备图片添加到画板中') {
+            const S = this;
+            fabricPointImg(S.photoDir + asset.photo, null, 0.3, img=>{
+              console.log(asset, img);
+              S.canvas.add(img)
+            })
+          },
+          handleDialogShow(_='显示添加设备对话框，录入设备数据') {
+            this.assetEditDialog.visibleAssetDialog = true
+          },
+          handleCurrentSaveCanvas (_='保存当前画板的数据到数据库') {
+            jsonPostLocalData('/save_draw.do', {content: toSerializable(this.canvas)}, data => {
+              this.$message(getCommonReqMessage(data));
+              this.canvas.clear();
+            }, window.cavs.port_cfg)
+          },
+          handleCanvasTemplateLoad (_='从数据库中读取模板数据') {
+            jsonGetLocalData('/list_draw.do', {}, data => {
+              this.dataTemplates = getRows(data);
+            }, window.cavs.port_cfg)
+          },
+          handleSelectDataToRedraw (v, _='选择数据模板并绘制') {
+            console.log('Select Serilaizibel Data', JSON.parse(v));
+            fromSerializable(this.canvas, v);
+          },
+          handleAddFabricText() {
+            this.canvas.add(fabricPointText(this.label, this.txt, 14))
+          },
+          beat(inf, _='定时获取最新数据的函数') {
+            const  S = this;
+            WS10.jsonDataService('simValue', {bv: 220, adj: 10}, d => {
+              let voltage = d.data;
+              //fabricRenderAll(S.canvas);
+            });
+          }
+        },
+        mounted() {
+          // 加载设备列表
+          this.doReloadAssertList();
+
+          // 创建画板
+          this.canvas = newFabricCanvas('canvas');
+
+          // 创建实时数据服务（此处是拉取更新的模式，可以定制推送服务）
+          WS10.connect('页面端ws客户端（ST01122）');
+
+          // 创建定时任务执行心跳
+          Rr.runxms('t-1',8,this.beat);
+        },
+        data: function () {
+          return {
+            canvas: undefined,
+            photoDir: '../server/files/',
+            formAsset: {
+              id: undefined,
+              code: undefined,
+              name: undefined,
+              voltage: undefined,
+              current: undefined,
+              power: undefined,
+              file: undefined
+            },
+            assetEditDialog: {
+              active: 'add',
+              title: {add: '添加设备', edit: '编辑设备'},
+              width: '600px',
+              visibleAssetDialog: false,
+            },
+            dataAssets: [],
+            dataTemplates: [],
+            txt: undefined,
+            label: undefined
+          }
+        },
+      })
+    })
+  </script>
+</head>
+<body>
+<div id="app">
+  <div>
+    <el-button @click="handleDialogShow">添加</el-button>
+    <el-button @click="handleCurrentSaveCanvas">保存数据</el-button>
+    <el-button @click="handleCanvasTemplateLoad">加载数据</el-button>
+    <el-select @change="handleSelectDataToRedraw" value="" placeholder="请选择">
+      <el-option
+          v-for="item in dataTemplates"
+          :key="item.id"
+          :label="'data.'+item.id"
+          :value="item.content">
+      </el-option>
+    </el-select>
+
+    <el-button @click="handleToJson">toJsonLog</el-button>
+    <el-button @click="handleToObject">toObjectLog</el-button>
+    <el-button @click="handleShowAllObjects">ObjectsLog</el-button>
+  </div>
+  <div class="draw-area">
+    <canvas id="canvas" width='1000' height='600' style="border: 1px solid plum"></canvas>
+    <div>
+      <el-select v-model="txt" placeholder="请选择">
+        <el-option
+                v-for="item in dataAssets"
+                :key="item.id"
+                :label="item.name"
+                :value="item.code">
+        </el-option>
+      </el-select>
+      <p>{{txt}}</p>
+      <input type="text" v-model="label"/>
+      <el-button @click="handleAddFabricText">添加Txt</el-button>
+    </div>
+  </div>
+  <div class="foolr-slow">
+    <ul>
+      <li v-for="ast in dataAssets">
+        <img :src="photoDir + ast.photo" :alt="ast.name" width="40" height="40"
+             :title="'双击添加'+ ast.name + '设备'" @dblclick="handleAssetDclick(ast)">
+      </li>
+    </ul>
+  </div>
+
+  <div class="exp">
+    <el-dialog
+        :title="assetEditDialog.title[assetEditDialog.active]"
+        :visible.sync="assetEditDialog.visibleAssetDialog"
+        :width="assetEditDialog.width"
+        :before-close="handleDialogClose"
+    >
+      <el-form :model="formAsset">
+        <el-form-item label="设备编号">
+          <el-input v-model="formAsset.code" auto-complete="off"></el-input>
+        </el-form-item>
+
+        <el-form-item label="设备名称">
+          <el-input v-model="formAsset.name" auto-complete="off"></el-input>
+        </el-form-item>
+
+        <el-form-item label="设备额定电压">
+          <el-input v-model="formAsset.voltage" auto-complete="off"></el-input>
+        </el-form-item>
+
+        <el-form-item label="设备额定电压">
+          <el-input v-model="formAsset.current" auto-complete="off"></el-input>
+        </el-form-item>
+
+        <el-form-item label="设备额定功率">
+          <el-input v-model="formAsset.power" auto-complete="off"></el-input>
+        </el-form-item>
+
+        <el-form-item label="图片">
+          <input type="file" @change="handleDialogFileChange"/>
+        </el-form-item>
+      </el-form>
+
+      <!-- button -->
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="handleDialogCancel">取 消</el-button>
+        <el-button type="primary" @click="handleDialogSave">确 定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+</div>
+</body>
+</html>
+
