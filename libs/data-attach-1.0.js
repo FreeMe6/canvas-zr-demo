@@ -68,51 +68,27 @@ function toSerializable (canvas) {
  */
 function fromSerializable (canvas, fetch) {
     canvas.clear();
-    let points = [];
-    let data = JSON.parse(fetch);
-    for(let obj of data.objects) {
-        if(obj[FabricPointCode]){
-            // 只记录测点数据
-            points.push(obj[FabricPointCode]);
-            fabricSet(obj[FabricPointCode], null)
-        }
-    }
+    // let points = [];
+    // let data = JSON.parse(fetch);
+    // for(let obj of data.objects) {
+    //     if(obj[FabricPointCode]){
+    //         // 只记录测点数据
+    //         points.push(obj[FabricPointCode]);
+    //         fabricSet(obj[FabricPointCode], null)
+    //     }
+    // }
     canvas.loadFromJSON(fetch);
-
-    // 先重新绘制一遍，否则下面获取的都是假的
-    fabricRenderAll(canvas);
-
-    //重新关联测点对象
-    let objs = canvas.getObjects();
-    for (let p of points){
-        for(let o of objs){
-            if(o[FabricPointCode]) {
-                //重新之前，先将原来的干掉才行吧
-                delete o[FabricPointCode];
-                // 在Object中注册这个附加属性
-                fabricAttchToObject(o, new Map([[FabricPointCode, p]]));
-                // 关联上测点对象
-                fabricSet(p, o)
-            }
-        }
-    }
 }
 
 /**
  * 获取测点Fabric对象
- * @param content
  * @param pointerId
  * @param fsize
  */
-function fabricPointText(content, pointerId, fsize) {
-    const _ = new fabric.Text(content, {
+function fabricPointText(text, pointerId, fsize) {
+    return new PointText(text, pointerId, {
         fontSize: fsize
     });
-    if (pointerId) {
-        fabricAttchToObject(_, new Map([[FabricPointCode, pointerId]]));
-    }
-
-    return _;
 }
 
 
@@ -194,8 +170,27 @@ const PointText = fabric.util.createClass(fabric.Text, {
     // 都有的
     type: 'pointText',
 
+    initialize: function(text, id, options) {
+        options || (options = { });
 
-})
+        this.callSuper('initialize', text || 'TEXT', options);
+        this.set('id', id || '');
+    },
+
+    /**
+     * 用于提供给序列化的
+     * @returns {Object}
+     */
+    toObject: function() {
+        return fabric.util.object.extend(this.callSuper('toObject'), {
+            id: this.get('id')
+        });
+    },
+
+    _render: function(ctx) {
+        this.callSuper('_render', ctx);
+    }
+});
 
 
 

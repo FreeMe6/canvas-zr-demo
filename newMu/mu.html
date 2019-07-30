@@ -24,8 +24,9 @@
   <script>
     window.cavs = {host: 'localhost', port: 3201, name: 'Canval Grap', version: '1.0.0 bate'}
     window.cavs.port_cfg = {port: window.cavs.port}
+
     $(function () {
-      new Vue({
+      vv = new Vue({
         el: '#app',
         methods: {
           //test
@@ -111,7 +112,7 @@
             fromSerializable(this.canvas, v);
           },
           handleAddFabricText() {
-            this.canvas.add(fabricPointText(this.label, this.txt, 14))
+            this.canvas.add(fabricPointText(this.dataPoint.text, this.dataPoint.id, 14))
           },
           beat(inf, _='定时获取最新数据的函数') {
             const  S = this;
@@ -155,8 +156,16 @@
             },
             dataAssets: [],
             dataTemplates: [],
-            txt: undefined,
-            label: undefined
+            dataPoint: {
+              id: undefined,
+              text: undefined
+            },
+            dataIoPoints: [
+              {id: 'i1.0', desc: '启动'},
+              {id: 'i1.1', desc: '停止'},
+              {id: 'i1.2', desc: '向左转'},
+              {id: 'i1.3', desc: '向右转'}
+            ]
           }
         },
       })
@@ -185,16 +194,17 @@
   <div class="draw-area">
     <canvas id="canvas" width='1000' height='600' style="border: 1px solid plum"></canvas>
     <div>
-      <el-select v-model="txt" placeholder="请选择">
-        <el-option
-                v-for="item in dataAssets"
-                :key="item.id"
-                :label="item.name"
-                :value="item.code">
-        </el-option>
-      </el-select>
+
       <p>{{txt}}</p>
-      <input type="text" v-model="label"/>
+      <p>绑定I/O点：<el-select v-model="dataPoint.id" placeholder="请选择">
+        <el-option
+                v-for="item in dataIoPoints"
+                :key="item.id"
+                :label="item.desc"
+                :value="item.id">
+        </el-option>
+      </el-select></p>
+      <p>显示的label：<input type="text" v-model="dataPoint.text"/></p>
       <el-button @click="handleAddFabricText">添加Txt</el-button>
     </div>
   </div>

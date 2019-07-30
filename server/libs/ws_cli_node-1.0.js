@@ -16,15 +16,7 @@ exports.start = function (name="cli", port=3030) {
     // 先发送启动信号
     let msg = {type: 'start', cli_code: WebSocket.cli_code, cli_name: WebSocket.cli_name}
     WebSocket.___ws.send(JSON.stringify(msg));
-
-    // 定时发送心跳信号
-    setInterval(function () {
-      WebSocket.___ws.send(JSON.stringify({type: 'ping', cli_code:WebSocket.cli_code}))
-    },3000)
-
-    if (WebSocket.readyHandler) {
-      WebSocket.readyHandler();
-    }
+    WebSocket.___ws.pools = new Map();
   });
 
   WebSocket.___ws.on('error', err => {
@@ -32,14 +24,23 @@ exports.start = function (name="cli", port=3030) {
   });
 
   WebSocket.___ws.on('message', data => {
-    // 处理接收的消息
-    if (data.message === 'pang') {
-      if (WebSocket.heartBeatEvent){
-        WebSocket.heartBeatEvent(data)
-      }
-    } else {
-      if(WebSocket.res) {
-        WebSocket.res(data)
+    let fc = undefined;
+    if (data.sid) {
+      fc = WebSocket.___ws.pools.get(data.sid);
+      switch (data.state) {
+        case 'init':
+          //调用加载完成ready事件
+          if (WebSocket.rh) WebSocket.rh(WebSocket);
+          break;
+        case 'success':
+          if (fc) fc(typeof data.data === 'string' ? JSON.parse(data.data) : data.data);
+          break;
+        case 'warning':
+        case 'error':
+          if (fc) fc(typeof data.msg === 'string' ? JSON.parse(data.msg) : data.msg);
+          break;
+        default:
+          break;
       }
     }
   });
@@ -55,21 +56,8 @@ exports.start = function (name="cli", port=3030) {
  */
 exports.ready = function (c) {
   if(c)
-    WebSocket.readyHandler = c;
+    WebSocket.rh = c;
 }
-
-/**
- * 心跳事件
- *
- * 如果你打算使用心跳干点什么，你可以调用这个函数，并绑定你需要做的事情
- *
- * @param callback
- */
-exports.beatEvent = function (callback) {
-  if (callback) {
-    WebSocket.heartBeatEvent = callback
-  }
-};
 
 /**
  * Json 数据服务(使用数据服务)
@@ -78,17 +66,19 @@ exports.beatEvent = function (callback) {
  * @param done 消息发送成功的回响
  */
 exports.jsonDataService = function (service, data, done) {
-  WebSocket.___ws.send(JSON.stringify({type: 'data_service', service: service, data: data, cli_code:WebSocket.cli_code}));
-  WebSocket.res = done
+  const k = uuid();
+  WebSocket.___ws.send(JSON.stringify({sid: k, type: 'data_service', service: service, data: data, cli_code:WebSocket.cli_code}));
+  WebSocket.___ws.pools.set(k, done);
 };
 
-/**
- * 发送消息(使用数据服务)
- * @param service 使用的服务名称 'xxxx'
- * @param blob 数据
- * @param done 消息发送成功的回响 function (jsonRel)
- */
-exports.blobPush = function (service, blob, done) {
-  WebSocket.___ws.send(blob);
-  WebSocket.res = done
+function uuid() {
+  const s = [];
+  const hexDigits = "0123456789abcdef";
+  for (let i = 0; i < 36; i++) {
+    s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+  }
+  s[14] = "4"; // bits 12-15 of the time_hi_and_version field to 0010
+  s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1); // bits 6-7 of the clock_seq_hi_and_reserved to 01
+  s[8] = s[13] = s[18] = s[23] = "-";
+  return s.join("");
 }
