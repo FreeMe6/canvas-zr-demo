@@ -30,7 +30,6 @@ const App = require('./libs/http-2.0.js');
 const mysql = require('./libs/mysql-2.0.js');
 const DbUtil = require('./libs/dbUtil-mysql.js');
 const AppTbs = require('./tables.js');
-const WsClient = require('./libs/ws_cli_node-1.0');
 const PORT = 3201;
 
 /** 启动服务（同时也是服务配置） */
@@ -39,18 +38,6 @@ App.start({port: PORT}, () => {
   DbUtil.getCreateSql(AppTbs.assets, sql => mysql.createTable(sql));
   DbUtil.getCreateSql(AppTbs.draw, sql => mysql.createTable(sql));
   DbUtil.getCreateSql(AppTbs.els, sql => mysql.createTable(sql));
-
-  WsClient.start('测试ws的服务端的扩展服务');
-
-  WsClient.beatEvent((d)=>{
-    console.log('heart beat', d)
-  })
-
-  WsClient.ready(function () {
-    WsClient.jsonDataService('count_area', {r: 5.5}, d => {
-      console.log(d);
-    })
-  })
 
 }, null, (req, res, p) => {
   if ('/upload_asset.do' === p.pathname) {

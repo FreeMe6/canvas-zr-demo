@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="../mu/mu.css">
+    <script src="../libs/jquery-3.2.1.min.js"></script>
+    <script src="../libs/fabric.min.js"></script>
+    <script src="../libs/vue-2.6.10.js"></script>
+
+    <script src="../libs/ajax-1.2.0.js"></script>
+    <script src="../libs/runner.js"></script>
+    <script src="../libs/ws-1.0.js"></script>
+    <script src="../libs/sStore-1.0.js"></script>
+</head>
+<body>
+<div id="app">
+    <div>
+        <button @click="handleCanvasTemplateLoad">加载数据</button>
+        <select @change="selected" placeholder="请选择" class="type-temp">
+            <option v-for="item in dataTemplates" :value="item.content">{{'data.'+item.id}}</option>
+        </select>
+    </div>
+    <div class="draw-area">
+        <canvas id="canvas" width='900' height='600' style="border: 1px solid plum"></canvas>
+    </div>
+</div>
+</body>
+<script>
+    window.cavs = {host: 'localhost', port: 3201, name: 'Canval Grap', version: '1.0.0 bate'};
+    window.cavs.port_cfg = {port: window.cavs.port};
+
+    new Vue({
+        el: '#app',
+        methods: {
+            handleCanvasTemplateLoad(_ = '从数据库中读取模板数据') {
+                jsonGetLocalData('/list_draw.do', {}, data => {
+                    this.dataTemplates = getRows(data);
+                }, window.cavs.port_cfg)
+            },
+            selected(e) {
+                const me = this;
+                // 记载json数据
+                this.canvas.loadFromJSON(JSON.parse(e.target.value));
+                mapStore.clearAll();
+                setTimeout(function () {
+                    me.fbrObjsReflush()
+                },1000)
+            },
+            toObject(el, att) {
+                el.toObject = (function (toObject) {
+                    return function () {
+                        return fabric.util.object.extend(toObject.call(this), att)
+                    };
+                })(el.toObject);
+            },
+            fbrObjsReflush() {
+                const me = this;
+                me.canvas.getObjects().forEach(o => {
+                    const k = 'id';
+                    if (!!o[k]) {
+                        me.toObject(o, {id: o.id});
+
+                        // 存储数据
+                        mapStore.contain(o[k], valid => {
+                            if (valid) {
+                                let arr = mapStore.get(o[k]);
+                                arr.push(o);
+                                mapStore.set(o[k], arr);
+                            } else {
+                                mapStore.set(o[k], [o])
+                            }
+                        })
+                    }
+                })
+            }
+        },
+        mounted() {
+            const S = this;
+            S.canvas = new fabric.StaticCanvas('canvas');
+            WS10.connect('页面端ws客户端（ST01122）');
+
+
+            Rr.runxms('t-1', 8, function () {
+                function fillPoint(key, value, options) {
+                    mapStore.contain(key, v => {
+                        if (v) {
+                            mapStore.get(key, arr => {
+                                arr.forEach(o => {
+                                    o.set('text', value);
+                                    if (options) o.set(options)
+                                })
+                            })
+                        }
+                    })
+                }
+
+                const tmplate = {
+                    voltage(d) {
+                        return `电压：${d.toFixed(2)}V`
+                    }
+                };
+
+                WS10.jsonDataService('simValue', {bv: 220, adj: 10}, d => fillPoint('i1.0', tmplate.voltage(d)));
+                WS10.jsonDataService('simValue', {bv: 220, adj: 10}, d => fillPoint('i1.1', tmplate.voltage(d)));
+                WS10.jsonDataService('simValue', {bv: 220, adj: 10}, d => fillPoint('i1.2', tmplate.voltage(d)));
+                WS10.jsonDataService('simValue', {bv: 220, adj: 10}, d => fillPoint('i1.3', tmplate.voltage(d)));
+                WS10.jsonDataService('simValue', {bv: 220, adj: 10}, d => fillPoint('i1.4', tmplate.voltage(d)));
+            });
+
+            Rr.runxs('t-1s', 1, function () {
+                S.canvas.renderAll();
+            })
+        },
+        data: function () {
+            return {
+                canvas: undefined,
+                photoDir: '../server/files/',
+                dataTemplates: [],
+            }
+        },
+    })
+</script>
+</html>

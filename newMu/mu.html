@@ -117,7 +117,8 @@
           beat(inf, _='定时获取最新数据的函数') {
             const  S = this;
             WS10.jsonDataService('simValue', {bv: 220, adj: 10}, d => {
-              let voltage = d.data;
+              let voltage = d;
+              console.log(voltage)
               //fabricRenderAll(S.canvas);
             });
           }

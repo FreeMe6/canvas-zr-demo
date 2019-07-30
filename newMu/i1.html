@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="../mu/mu.css">
+    <script src="../libs/jquery-3.2.1.min.js"></script>
+    <script src="../libs/fabric.min.js"></script>
+    <script src="../libs/vue-2.6.10.js"></script>
+
+    <script src="../libs/ajax-1.2.0.js"></script>
+    <script src="../libs/runner.js"></script>
+    <script src="../libs/ws-1.0.js"></script>
+</head>
+<body>
+<div id="app">
+    <div>
+        <button @click="handleDialogShow">添加</button>
+        <button @click="handleCurrentSaveCanvas">保存数据</button>
+        <button @click="handleCanvasTemplateLoad">加载数据</button>
+        <select @change="selected" placeholder="请选择" class="type-temp">
+            <option v-for="item in dataTemplates" :value="item.content">{{'data.'+item.id}}</option>
+        </select>
+
+        <button @click="handleToJson">toJsonLog</button>
+        <button @click="handleToObject">toObjectLog</button>
+        <button @click="handleShowAllObjects">ObjectsLog</button>
+        <button @click="fbrObjsReflush">重新将id转到toObjects中</button>
+        <button @click="toShowPage">跳转到展示页面，不可编辑</button>
+    </div>
+    <div class="draw-area">
+        <canvas id="canvas" width='900' height='600' style="border: 1px solid plum"></canvas>
+        <div>
+            <p>绑定I/O点：<select v-model="dataPoint.id" placeholder="请选择">
+                <option v-for="p in dataIoPoints" :value="p.id">{{p.desc}}</option>
+            </select></p>
+            <p>显示的label：<input type="text" v-model="dataPoint.text"/></p>
+            <button @click="handleAddFabricText">添加Txt</button>
+        </div>
+    </div>
+    <div class="foolr-slow">
+        <ul>
+            <li v-for="ast in dataAssets">
+                <img :src="photoDir + ast.photo" :alt="ast.name" width="40" height="40"
+                     :title="'双击添加'+ ast.name + '设备'" @dblclick="handleAssetDclick(ast)">
+            </li>
+        </ul>
+    </div>
+</div>
+</body>
+<script>
+    window.cavs = {host: 'localhost', port: 3201, name: 'Canval Grap', version: '1.0.0 bate'};
+    window.cavs.port_cfg = {port: window.cavs.port};
+
+    const mapStore = {
+        _map: new Map(),
+        set(k, v) {
+            this._map.set(k, v);
+        },
+        get(k) {
+            return this._map.get(k)
+        },
+        get(k, c) {
+            c(this._map.get(k))
+        },
+        contain(k) {
+            return !!this._map.get(k)
+        },
+        contain(k, c) {
+            c(!!this._map.get(k))
+        },
+        delte(k) {
+            this._map.delete(k)
+        },
+        clearAll() {
+            this._map.clear()
+        }
+    };
+
+
+    vv = new Vue({
+        el: '#app',
+        methods: {
+            //test
+            // 1. 序列化数据查看
+            handleToObject() {
+                console.log('To Serilaizibel Data (Object)', this.canvas.toObject())
+            },
+            handleToJson() {
+                console.log('To Serilaizibel Data (Json)', this.canvas.toJSON())
+            },
+            handleShowAllObjects() {
+                console.log('as canvas all objects', this.canvas.getObjects())
+            },
+            //
+            doReloadAssertList() {
+                jsonGetLocalData('/list_asset.do', {}, d => {
+                    this.dataAssets = getRows(d);
+                }, window.cavs.port_cfg)
+            },
+            formAssetFormat() {
+                let file = this.formAsset.file[0];
+                this.formAsset.file = undefined;
+                let formData = new FormData();
+                Object.entries(this.formAsset).map(([k, v]) => formData.append(k, v));
+                // 如果有多个图，可以多次对相同key进行添加
+                formData.append('file', file, file.name || ('blob.' + file.type.substr('image/'.length)));
+                return formData;
+            },
+            //
+            handleDialogFileChange(e) {
+                console.log(e.target.files);
+                this.formAsset.file = e.target.files;
+            },
+            handleDialogReset() {
+                this.assetEditDialog.visibleAssetDialog = false
+                this.assetEditDialog.active = 'add'
+                this.formAsset.code = undefined
+                this.formAsset.name = undefined
+                this.formAsset.voltage = undefined
+                this.formAsset.current = undefined
+                this.formAsset.power = undefined
+                this.formAsset.file = undefined
+                $('input[type=file]').val(null);
+            },
+            handleDialogClose(done) {
+                if (done) done()
+                this.handleDialogReset();
+            },
+            handleDialogCancel() {
+                this.handleDialogReset();
+            },
+            handleDialogSave() {
+                jsonPostLocalMutiptData('/upload_asset.do', this.formAssetFormat(), data => {
+                    this.$message(getCommonReqMessage(data));
+                    this.handleDialogReset()
+                    this.doReloadAssertList()
+                }, window.cavs.port_cfg)
+            },
+            //
+            handleAssetDclick(asset, _ = '从设备列表中选中设备图片添加到画板中') {
+                const S = this;
+                fabric.Image.fromURL(S.photoDir + asset.photo, function (_) {
+                    _.scale(0.3).set({top: 100, left: 100});
+                    S.canvas.add(_)
+                });
+            },
+            handleDialogShow(_ = '显示添加设备对话框，录入设备数据') {
+                this.assetEditDialog.visibleAssetDialog = true
+            },
+            handleCurrentSaveCanvas(_ = '保存当前画板的数据到数据库') {
+                function toSerializable(canvas) {
+                    return JSON.stringify(canvas.toJSON())
+                }
+
+                jsonPostLocalData('/save_draw.do', {content: toSerializable(this.canvas)}, data => {
+                    alert('success');
+                    this.canvas.clear();
+                }, window.cavs.port_cfg)
+            },
+            handleCanvasTemplateLoad(_ = '从数据库中读取模板数据') {
+                jsonGetLocalData('/list_draw.do', {}, data => {
+                    this.dataTemplates = getRows(data);
+                }, window.cavs.port_cfg)
+            },
+            handleAddFabricText() {
+                const me = this;
+                let el = new fabric.Text(me.dataPoint.text, {
+                    fontSize: 16,
+                    top: 100,
+                    left: 100
+                });
+
+                me.toObject(el, {id: me.dataPoint.id});
+                me.canvas.add(el);
+            },
+            beat(inf, _ = '定时获取最新数据的函数') {
+
+            },
+            //
+            selected(e) {
+                const me = this;
+                // 记载json数据
+                this.canvas.loadFromJSON(JSON.parse(e.target.value));
+                mapStore.clearAll();
+                setTimeout(function () {
+                    me.fbrObjsReflush()
+                },100)
+            },
+            toObject(el, att) {
+                el.toObject = (function (toObject) {
+                    return function () {
+                        return fabric.util.object.extend(toObject.call(this), att)
+                    };
+                })(el.toObject);
+            },
+            // 加载面板成功之后，需要将测点进行梳理
+            fbrObjsReflush() {
+                const me = this;
+                me.canvas.getObjects().forEach(o => {
+                    const k = 'id';
+                    if (!!o[k]) {
+                        me.toObject(o, {id: o.id});
+
+                        // 存储数据
+                        mapStore.contain(o[k], valid => {
+                            if (valid) {
+                                let arr = mapStore.get(o[k]);
+                                arr.push(o);
+                                mapStore.set(o[k], arr);
+                            } else {
+                                mapStore.set(o[k], [o])
+                            }
+                        })
+                    }
+                })
+            },
+            toShowPage() {
+                window.location.href = 'static.html'
+            }
+        },
+        mounted() {
+            // 加载设备列表
+            this.doReloadAssertList();
+
+            // 创建画板
+            this.canvas = new fabric.Canvas('canvas');
+
+            // 创建实时数据服务（此处是拉取更新的模式，可以定制推送服务）
+            WS10.connect('页面端ws客户端（ST01122）');
+
+            // 创建定时任务执行心跳
+            const S = this;
+            Rr.runxms('t-1', 8, function () {
+                function fillPoint(key, value, options) {
+                    mapStore.contain(key, v => {
+                        if (v) {
+                            mapStore.get(key, arr => {
+                                arr.forEach(o => {
+                                    o.set('text', value);
+                                    if (options) o.set(options)
+                                })
+                            })
+                        }
+                    })
+                }
+
+                const tmplate = {
+                    voltage(d) {
+                        return `电压：${d.toFixed(2)}V`
+                    },
+                    current(d) {
+                        return `电流：${d.toFixed(2)}A`
+                    }
+                };
+
+                WS10.jsonDataService('simValue', {bv: 220, adj: 10}, d => fillPoint('i1.0', tmplate.voltage(d)));
+                WS10.jsonDataService('simValue', {bv: 4, adj: 1}, d => fillPoint('i1.1', tmplate.current(d)));
+                WS10.jsonDataService('simValue', {bv: 380, adj: 10}, d => fillPoint('i1.2', tmplate.voltage(d)));
+                WS10.jsonDataService('simValue', {bv: 15, adj: 1}, d => fillPoint('i1.3', tmplate.current(d)));
+            });
+
+            // 画板只需要定时刷新即可
+            Rr.runxs('t-1s', 1, function () {
+                S.canvas.renderAll();
+            })
+        },
+        data: function () {
+            return {
+                canvas: undefined,
+                photoDir: '../server/files/',
+                formAsset: {
+                    id: undefined,
+                    code: undefined,
+                    name: undefined,
+                    voltage: undefined,
+                    current: undefined,
+                    power: undefined,
+                    file: undefined
+                },
+                assetEditDialog: {
+                    active: 'add',
+                    title: {add: '添加设备', edit: '编辑设备'},
+                    width: '600px',
+                    visibleAssetDialog: false,
+                },
+                dataAssets: [],
+                dataTemplates: [],
+                dataPoint: {
+                    id: undefined,
+                    text: undefined
+                },
+                dataIoPoints: [
+                    {id: 'i1.0', desc: 'T1电压'},
+                    {id: 'i1.1', desc: 'T1电流'},
+                    {id: 'i1.2', desc: 'T2电压'},
+                    {id: 'i1.3', desc: 'T2电流'}
+                ]
+            }
+        },
+    })
+</script>
+</html>
